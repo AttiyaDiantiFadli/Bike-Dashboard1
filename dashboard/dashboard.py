@@ -9,7 +9,7 @@ sns.set(style='dark')
 
 # Load Data
 file_path = "dashboard/all_data.csv"
-bike_df = pd.read_csv(file_path)
+bike_df = pd.read_csv(file_path, parse_dates=["dteday"])
 
 # Ubah semua nama kolom menjadi lowercase
 bike_df.columns = bike_df.columns.str.lower()
@@ -47,10 +47,14 @@ with st.sidebar:
     # Filter Rentang Tanggal
     start_date, end_date = st.date_input(
         "Pilih Rentang Tanggal",
-        [bike_df["dteday"].min(), bike_df["dteday"].max()],
-        bike_df["dteday"].min(),
-        bike_df["dteday"].max(),
+        [bike_df["dteday"].min().date(), bike_df["dteday"].max().date()],
+        bike_df["dteday"].min().date(),
+        bike_df["dteday"].max().date(),
     )
+
+    # Konversi start_date & end_date ke pandas.Timestamp agar sesuai dengan dteday
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
 
     # Filter Musim
     selected_seasons = st.multiselect("Pilih Musim", bike_df["season"].unique(), bike_df["season"].unique())
@@ -68,8 +72,8 @@ with st.sidebar:
 
 # Terapkan Filter
 filtered_df = bike_df[
-    (bike_df["dteday"] >= pd.to_datetime(start_date)) &
-    (bike_df["dteday"] <= pd.to_datetime(end_date)) &
+    (bike_df["dteday"] >= start_date) &
+    (bike_df["dteday"] <= end_date) &
     (bike_df["season"].isin(selected_seasons)) &
     (bike_df["weathersit"].isin(selected_weather)) &
     (bike_df["hr"] >= min_hour) &
@@ -78,7 +82,11 @@ filtered_df = bike_df[
 
 # Dashboard Header
 st.header('Bike Rental Dashboard 🚴‍♂️')
-st.write("Selamat datang di layanan penyewaan sepeda terbaik. Kami menawarkan berbagai jenis sepeda untuk berbagai kebutuhan Anda, mulai dari sepeda standar untuk perjalanan santai hingga sepeda listrik dan sepeda gunung untuk petualangan yang lebih menantang.")
+st.write("""
+Selamat datang di layanan penyewaan sepeda terbaik. 
+Kami menawarkan berbagai jenis sepeda untuk berbagai kebutuhan Anda, 
+mulai dari sepeda standar untuk perjalanan santai hingga sepeda listrik dan sepeda gunung untuk petualangan yang lebih menantang.
+""")
 
 # Harga Sewa
 st.subheader("💰 Harga Sewa Sepeda")
@@ -93,7 +101,7 @@ with col1:
     total_orders = filtered_df[cnt_column].sum()
     st.metric("Total Penyewaan", value=total_orders)
 with col2:
-    total_revenue = format_currency(total_orders * 15000, "IDR", locale='id_ID')  # Harga rata-rata Rp. 15.000
+    total_revenue = format_currency(total_orders * 15000, "IDR", locale='id_ID')
     st.metric("Total Revenue", value=total_revenue)
 
 # Penyewaan Berdasarkan Musim
@@ -105,7 +113,7 @@ fig = px.bar(byseason_df,
              y=cnt_column, 
              title="Total Penyewaan per Musim", 
              labels={"season": "Musim", cnt_column: "Jumlah Penyewaan"},
-             color="season",  
+             color="season",
              color_discrete_sequence=px.colors.qualitative.Set1)
 st.plotly_chart(fig)
 
